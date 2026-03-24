@@ -1,19 +1,20 @@
-# auth.py - запустите один раз для авторизации
+# auth_local.py - запустите на своем ПК один раз
 import asyncio
 from telethon import TelegramClient
-import os
+from datetime import datetime
 
 # Ваши данные
 API_ID = 32156450
 API_HASH = '969799d773d7e9095b76f50a693f9e31'
-PHONE_NUMBER = '+375299206967'
+PHONE_NUMBER = '+375298206967'
 PASSWORD = 'ngrief12'
 
-session_name = f'user_session_{PHONE_NUMBER[-8:]}'
+# Имя файла сессии (без временной метки для постоянного использования)
+session_name = 'user_session_permanent'
 
 async def main():
     print("=" * 50)
-    print("🔐 Авторизация Telegram")
+    print("🔐 Авторизация Telegram для Railway")
     print("=" * 50)
     print(f"📱 Номер: {PHONE_NUMBER}")
     print()
@@ -21,22 +22,25 @@ async def main():
     client = TelegramClient(session_name, API_ID, API_HASH)
     
     try:
-        # Пытаемся авторизоваться
+        # Запрашиваем код
+        code = input("📲 Введите код из Telegram: ")
+        
         await client.start(
             phone=PHONE_NUMBER,
-            code_callback=lambda: input("📲 Введите код из Telegram: "),
-            password=lambda: input("🔑 Введите пароль (если есть): ") if PASSWORD else None
+            code=code,
+            password=lambda: PASSWORD
         )
         
         print()
         print("✅ Авторизация успешна!")
-        print(f"📁 Сессия сохранена в файл: {session_name}.session")
-        print()
-        print("Теперь можно запускать monitor.py")
+        print(f"📁 Файл сессии сохранен: {session_name}.session")
         
-        # Показываем информацию об аккаунте
         me = await client.get_me()
         print(f"👤 Аккаунт: {me.first_name} (@{me.username})")
+        print()
+        print("Теперь загрузите эти файлы на GitHub:")
+        print(f"  - {session_name}.session")
+        print(f"  - {session_name}.session-journal (если есть)")
         
     except Exception as e:
         print(f"❌ Ошибка: {e}")
