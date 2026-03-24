@@ -23,50 +23,118 @@ AUTO_REPLY_USERS = {
 MESSAGE_TO_FORWARD = 'https://t.me/lamavaape/42'
 # ======================================
 
-# ============= РАСШИРЕННЫЕ ТРИГГЕРЫ =============
-TRIGGER_WORDS = [
+# ============= ТОЧНОЕ СОВПАДЕНИЕ ДЛЯ ТРИГГЕРОВ =============
+# Слова, которые должны быть в сообщении (не подстроки, а именно эти слова)
+TRIGGER_WORDS_EXACT = [
     'куплю', 'ищу', 'жижу', 'жижку', 'жидкость', 'жижки',
+    'карик', 'картридж', 'картриджи', 'испаритель', 'испарители',
+    'под', 'поды', 'подик', 'одноразку', 'одноразки',
+    'вейп', 'вейпы', 'подоночки', 'хрос', 'расходник', 'расходники',
+]
+
+# Фразы для точного совпадения (целые фразы)
+TRIGGER_PHRASES_EXACT = [
     'солевую жижу', 'жижу с никотином', 'жижу без никотина',
     'никотиновые жидкости', 'фруктовую жижу', 'сладкую жижу',
     'крепкую жижу', 'свежую жижу', 'жижу оптом', 'жижу недорого',
-    'карик', 'картридж', 'картриджи', 'испаритель', 'испарители',
     'сменники', 'сменный картридж', 'картриджи на под',
-    'оригинальные картриджи', 'оригинальные поды',
-    'под', 'поды', 'подик', 'одноразку', 'одноразки',
-    'вейп', 'вейпы', 'подоночки', '5 мини',
+    'оригинальные картриджи', 'оригинальные поды', '5 мини',
     'подонки', 'catswill', 'коты', 'котов', 'найс шот',
     'кэствил', 'хотспот', 'лабубу', 'злую', 'восток', 'карик',
     'тех уник', 'технический', 'политех', 'рик', 'rick', 'аркад',
-    'монашку', 'злую монашку', 'хрос', 'расходник', 'расходники',
-    'вкусные одноразки', 'табачку', 'оригинал', 'солевые вкусы',
-    'топ вкусы', 'новые вкусы', 'популярные вкусы', 'кислые',
-    'кислый', 'кислую', 'сладкую', 'вкусную', 'на востоке', 'на дк',
-    'на замерзоне', 'замерзон', 'у церкви', 'на белой', 'доставкой',
-    'жижу куплю', 'карик куплю', 'жижку куплю', 'картридж куплю', 'куплю жижу банк',
+    'монашку', 'злую монашку', 'вкусные одноразки', 'табачку',
+    'оригинал', 'солевые вкусы', 'топ вкусы', 'новые вкусы',
+    'популярные вкусы', 'кислые', 'кислый', 'кислую', 'сладкую',
+    'вкусную', 'на востоке', 'на дк', 'на замерзоне', 'замерзон',
+    'у церкви', 'на белой', 'доставкой', 'жижу куплю', 'карик куплю',
+    'жижку куплю', 'картридж куплю', 'куплю жижу банк',
 ]
 
-IMPORTANT_KEYWORDS = ['восток', 'куплю жижу', 'куплю восток', 'на востоке', 'ищу восток']
+# Объединяем все в один список для проверки
+ALL_TRIGGERS = TRIGGER_WORDS_EXACT + TRIGGER_PHRASES_EXACT
 
-def create_regex_pattern():
-    escaped_words = [re.escape(word) for word in TRIGGER_WORDS]
-    return re.compile('|'.join(escaped_words), re.IGNORECASE)
+# Важные ключевые слова (если есть - сообщение считается важным)
+IMPORTANT_KEYWORDS = ['восток', 'куплю восток', 'на востоке', 'ищу восток', 'срочно']
 
-TRIGGER_PATTERN = create_regex_pattern()
-
-def check_important_message(text):
+def contains_exact_trigger(text):
+    """Проверяет, содержит ли сообщение точное совпадение триггера"""
     if not text:
         return False
+    
     text_lower = text.lower()
-    for keyword in IMPORTANT_KEYWORDS:
-        if keyword in text_lower:
-            return True
+    
+    # Проверяем каждое слово/фразу
+    for trigger in ALL_TRIGGERS:
+        # Для коротких слов (до 4 букв) используем границы слова
+        if len(trigger) <= 4:
+            # Используем границы слова для точного совпадения
+            pattern = r'\b' + re.escape(trigger) + r'\b'
+            if re.search(pattern, text_lower):
+                return True
+        else:
+            # Для длинных слов/фраз просто проверяем вхождение
+            if trigger in text_lower:
+                return True
     return False
 
 def get_matched_triggers(text):
+    """Возвращает список найденных триггеров в сообщении"""
     if not text:
         return []
-    matches = TRIGGER_PATTERN.findall(text.lower())
-    return list(set(matches))
+    
+    text_lower = text.lower()
+    found = []
+    
+    for trigger in ALL_TRIGGERS:
+        if len(trigger) <= 4:
+            pattern = r'\b' + re.escape(trigger) + r'\b'
+            if re.search(pattern, text_lower):
+                found.append(trigger)
+        else:
+            if trigger in text_lower:
+                found.append(trigger)
+    
+    return list(set(found))
+
+def check_important_message(text):
+    """Проверяет, является ли сообщение важным (есть куплю восток)"""
+    if not text:
+        return False
+    text_lower = text.lower()
+    # Важное сообщение если есть "куплю восток" или просто "восток" в контексте покупки
+    if 'куплю восток' in text_lower or 'ищу восток' in text_lower:
+        return True
+    if 'восток' in text_lower and ('куплю' in text_lower or 'ищу' in text_lower):
+        return True
+    return False
+
+def should_auto_reply(message_text):
+    """Проверяет, нужно ли отправлять автоответ в ЛС"""
+    if not message_text:
+        return False
+    text_lower = message_text.lower()
+    
+    # Автоответ отправляем если:
+    # 1. Есть "куплю восток" или "ищу восток"
+    if 'куплю восток' in text_lower or 'ищу восток' in text_lower:
+        return True
+    
+    # 2. Есть "куплю жижу" или подобное без других слов
+    # Проверяем что сообщение короткое и содержит только одно ключевое слово
+    words = text_lower.split()
+    
+    # Если сообщение короткое (до 5 слов) и содержит ключевые слова
+    if len(words) <= 5:
+        key_triggers = ['жижу', 'жижку', 'жидкость', 'карик', 'картридж', 'под', 'поды']
+        for trigger in key_triggers:
+            if trigger in text_lower:
+                # Проверяем что нет других слов (кроме "куплю" и самого триггера)
+                important_words = ['куплю', 'ищу', trigger]
+                other_words = [w for w in words if w not in important_words]
+                if len(other_words) <= 1:  # Допускается одно дополнительное слово
+                    return True
+    
+    return False
 # ======================================
 
 # Настройка логирования
@@ -89,7 +157,7 @@ def get_user_link(username, user_id, first_name):
     else:
         return f"tg://user?id={user_id}"
 
-def send_notification(message_text, chat_name, sender_id, sender_username, sender_first_name, is_important=False, matched_triggers=None):
+def send_notification(message_text, chat_name, sender_id, sender_username, sender_first_name, is_important=False, matched_triggers=None, auto_reply_sent=False):
     if matched_triggers is None:
         matched_triggers = []
     
@@ -117,8 +185,8 @@ def send_notification(message_text, chat_name, sender_id, sender_username, sende
         f"{border}\n"
     )
     
-    if sender_username and sender_username in AUTO_REPLY_USERS:
-        notification += f"🤖 <b>Автоответ:</b> Будет отправлен автоматический ответ\n"
+    if auto_reply_sent:
+        notification += f"✅ <b>Автоответ:</b> Отправлен в ЛС пользователю\n"
     
     if is_important:
         notification += f"⚠️ <b>СРОЧНО!</b> Важное сообщение!\n"
@@ -138,11 +206,19 @@ def send_notification(message_text, chat_name, sender_id, sender_username, sende
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
 
-async def forward_message_to_user(user_client, target_username, original_message):
+async def send_auto_reply_to_user(user_client, sender, original_message):
+    """Отправляет автоответ пользователю в ЛС"""
     try:
-        user = await user_client.get_entity(target_username)
-        reply_text = AUTO_REPLY_USERS.get(target_username, "привет, могу продать")
+        # Получаем пользователя
+        user = await user_client.get_entity(sender.id)
         
+        # Текст ответа
+        reply_text = "Привет, могу продать! Напиши мне, что именно интересует."
+        
+        # Отправляем сообщение
+        await user_client.send_message(user, reply_text, link_preview=False)
+        
+        # Пересылаем сообщение из канала
         try:
             parts = MESSAGE_TO_FORWARD.split('/')
             channel_username = parts[-2]
@@ -152,43 +228,43 @@ async def forward_message_to_user(user_client, target_username, original_message
             message_to_forward = await user_client.get_messages(channel, ids=message_id)
             
             if message_to_forward:
-                await user_client.send_message(user, reply_text, link_preview=False)
                 await user_client.forward_messages(user, message_to_forward, channel)
-                logger.info(f"✅ Автоответ @{target_username}")
+                logger.info(f"✅ Автоответ с пересылкой отправлен @{sender.username if sender.username else sender.id}")
             else:
-                await user_client.send_message(user, reply_text)
-                logger.info(f"✅ Автоответ @{target_username} (текст)")
+                logger.info(f"✅ Автоответ (текст) отправлен @{sender.username if sender.username else sender.id}")
         except Exception as e:
-            logger.error(f"Ошибка: {e}")
-            await user_client.send_message(user, reply_text)
+            logger.error(f"Ошибка пересылки: {e}")
+            
+        return True
+        
     except Exception as e:
-        logger.error(f"Ошибка: {e}")
+        logger.error(f"❌ Ошибка отправки автоответа: {e}")
+        return False
 
 async def main():
     try:
         print("=" * 70)
-        print("🤖 Telegram Монитор сообщений")
+        print("🤖 Telegram Монитор сообщений (Только беседы)")
         print("=" * 70)
         print(f"📱 Номер: {PHONE_NUMBER}")
-        print(f"📝 Отслеживается {len(TRIGGER_WORDS)} фраз")
+        print(f"📝 Отслеживается {len(ALL_TRIGGERS)} фраз (точное совпадение)")
+        print("🚫 Личные чаты игнорируются")
         print("=" * 70)
         
         # Проверяем, существует ли файл сессии
         if os.path.exists(f'{session_name}.session'):
             logger.info("Найдена сохраненная сессия, подключаемся...")
-            # Подключаемся с использованием сохраненной сессии
             await user_client.start(
                 phone=PHONE_NUMBER,
-                password=lambda: PASSWORD  # Автоматический ввод пароля
+                password=lambda: PASSWORD
             )
         else:
             logger.info("Сессия не найдена, требуется авторизация...")
-            # Запрашиваем код и автоматически вводим пароль
             code = input("🔑 Введите код из Telegram: ")
             await user_client.start(
                 phone=PHONE_NUMBER,
                 code=code,
-                password=lambda: PASSWORD  # Автоматический ввод пароля
+                password=lambda: PASSWORD
             )
         
         logger.info("✅ Подключение успешно!")
@@ -198,39 +274,53 @@ async def main():
         
         # Получаем список чатов
         dialogs = await user_client.get_dialogs()
-        logger.info(f"📊 Найдено чатов: {len(dialogs)}")
         
-        groups = sum(1 for d in dialogs if d.is_group)
-        channels = sum(1 for d in dialogs if d.is_channel)
-        users = sum(1 for d in dialogs if d.is_user)
-        logger.info(f"📈 Статистика: {groups} групп, {channels} каналов, {users} личных чатов")
+        # Фильтруем только группы и каналы (исключаем личные чаты)
+        groups_and_channels = [d for d in dialogs if d.is_group or d.is_channel]
+        
+        logger.info(f"📊 Найдено чатов: {len(dialogs)}")
+        logger.info(f"📊 Из них бесед (группы/каналы): {len(groups_and_channels)}")
+        logger.info("🚫 Личные чаты исключены из мониторинга")
+        
+        groups = sum(1 for d in groups_and_channels if d.is_group)
+        channels = sum(1 for d in groups_and_channels if d.is_channel)
+        logger.info(f"📈 Статистика: {groups} групп, {channels} каналов")
         
         @user_client.on(events.NewMessage)
         async def handler(event):
             try:
+                # Пропускаем личные чаты (только группы и каналы)
+                if event.is_private:
+                    return
+                
                 message_text = event.message.text or event.message.caption or ""
                 if not message_text:
                     return
                 
-                matched_triggers = get_matched_triggers(message_text)
-                
-                if matched_triggers:
+                # Проверяем точное совпадение триггеров
+                if contains_exact_trigger(message_text):
                     chat = await event.get_chat()
                     sender = await event.get_sender()
                     
-                    if hasattr(chat, 'title') and chat.title:
-                        chat_name = chat.title
-                    elif hasattr(chat, 'first_name'):
-                        chat_name = chat.first_name
-                        if hasattr(chat, 'last_name') and chat.last_name:
-                            chat_name += f" {chat.last_name}"
-                    else:
-                        chat_name = "Unknown"
+                    # Определяем название чата
+                    chat_name = chat.title if hasattr(chat, 'title') else "Unknown"
                     
                     sender_username = sender.username if hasattr(sender, 'username') else None
                     sender_first_name = sender.first_name if hasattr(sender, 'first_name') else "Unknown"
+                    
+                    # Проверяем важность
                     is_important = check_important_message(message_text)
                     
+                    # Получаем список найденных триггеров
+                    matched_triggers = get_matched_triggers(message_text)
+                    
+                    # Проверяем, нужно ли отправить автоответ в ЛС
+                    auto_reply_sent = False
+                    if should_auto_reply(message_text):
+                        logger.info(f"🤖 Отправка автоответа в ЛС пользователю @{sender_username if sender_username else sender.id}")
+                        auto_reply_sent = await send_auto_reply_to_user(user_client, sender, event.message)
+                    
+                    # Отправляем уведомление
                     send_notification(
                         message_text=message_text,
                         chat_name=chat_name,
@@ -238,11 +328,9 @@ async def main():
                         sender_username=sender_username,
                         sender_first_name=sender_first_name,
                         is_important=is_important,
-                        matched_triggers=matched_triggers
+                        matched_triggers=matched_triggers,
+                        auto_reply_sent=auto_reply_sent
                     )
-                    
-                    if sender_username and sender_username in AUTO_REPLY_USERS:
-                        await forward_message_to_user(user_client, sender_username, event.message)
                     
                     triggers_str = ', '.join(matched_triggers[:3])
                     if is_important:
@@ -251,9 +339,10 @@ async def main():
                         logger.info(f"📨 [{triggers_str}] в {chat_name}")
                     
             except Exception as e:
-                logger.error(f"Ошибка: {e}")
+                logger.error(f"Ошибка обработки: {e}")
         
         logger.info("👀 Мониторинг запущен 24/7")
+        logger.info("📌 Отслеживаются только сообщения в группах и каналах")
         await user_client.run_until_disconnected()
         
     except Exception as e:
