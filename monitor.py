@@ -258,6 +258,7 @@ async def main():
         print(f"📝 Условие: Действие + Товар")
         print("=" * 70)
         
+<<<<<<< HEAD
         # Удаляем старую сессию если есть проблемы
         if os.path.exists(f'{SESSION_NAME}.session'):
             try:
@@ -289,10 +290,31 @@ async def main():
                 await user_client.sign_in(password=PASSWORD)
                 logger.info("✅ Пароль автоматически подставлен")
         
+=======
+        # Проверяем, есть ли файл сессии
+        if os.path.exists(f'{SESSION_NAME}.session'):
+            logger.info("Найдена сохраненная сессия, подключаемся...")
+            await user_client.start(phone=PHONE_NUMBER)
+        else:
+            logger.info("Сессия не найдена, начинаем авторизацию...")
+            await user_client.connect()
+            await user_client.send_code_request(PHONE_NUMBER)
+            code = input("🔑 Введите код из Telegram: ")
+            await user_client.sign_in(PHONE_NUMBER, code)
+            try:
+                await user_client.sign_in(password=PASSWORD)
+            except:
+                pass
+        
+>>>>>>> d10077e6fa3b66cc32c2f625725693a9ef2067f3
         logger.info("✅ Подключение успешно!")
         
         me = await user_client.get_me()
         logger.info(f"👤 Аккаунт: {me.first_name} (@{me.username})")
+<<<<<<< HEAD
+=======
+        logger.info(f"📁 Сессия: {SESSION_NAME}.session")
+>>>>>>> d10077e6fa3b66cc32c2f625725693a9ef2067f3
         
         dialogs = await user_client.get_dialogs()
         groups_and_channels = [d for d in dialogs if d.is_group or d.is_channel]
